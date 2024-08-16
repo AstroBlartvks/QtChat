@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>UI CHAT</string>
   </property>
   <property name="styleSheet">
    <string notr="true">background-color: rgb(38, 38, 38);</string>

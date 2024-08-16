@@ -119,7 +119,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "UI CHAT"))
         self.lineEdit.setPlaceholderText(_translate("MainWindow", "IP:PORT"))
         self.lineEdit_2.setPlaceholderText(_translate("MainWindow", "НИК"))
         self.pushButton.setText(_translate("MainWindow", "Подключиться"))

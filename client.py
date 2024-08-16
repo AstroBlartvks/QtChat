@@ -12,58 +12,87 @@ class mywindow(QtWidgets.QMainWindow):
         self.server = None
         self.receive_process = None
         self.nickname = ''
+        self.connection = False
         
         self.ui.pushButton.clicked.connect(self.connect_to)   
         self.ui.pushButton_2.clicked.connect(self.send_msg) 
+    
+    def closeEvent(self, event):
+        reply = QtWidgets.QMessageBox.question\
+        (self, 'Вы нажали на крестик',
+            "Вы уверены, что хотите уйти?",
+            QtWidgets.QMessageBox.Yes,
+            QtWidgets.QMessageBox.No)
+        if reply == QtWidgets.QMessageBox.Yes:
+            self.disconnect()
+            event.accept()
+        else:
+            event.ignore()
+    
+    def create_note(self, message, color):
+        item = QtWidgets.QListWidgetItem(message)
+        item.setForeground(QtGui.QColor(color))
+        self.ui.listWidget.addItem(item)
+
+    def formate(self, text):
+        return "\n".join(list([x.rstrip() for x in text.split("\n") if x != "" and x != " " and not(x.count(" ") == len(x))]))
+
+    def disconnect(self):
+        if self.connection:
+            self.server.close()
+            self.create_note("Server: Вы отключились от сервера!", "purple")
+            self.connection = False
 
     def connect_to(self):
-
-        self.nickname = self.ui.lineEdit_2.text()
-        print(self.nickname)
+        self.disconnect()
+        self.nickname = self.ui.lineEdit_2.text().rstrip()
         if len(self.nickname) > 16:
-            item = QtWidgets.QListWidgetItem("Server: Слишком большой ник")
-            item.setForeground(QtGui.QColor("purple"))
-            self.ui.listWidget.addItem(item)
-            self.server.close()
+            self.create_note("Слишком большой ник!", "purple")
         elif len(self.nickname) == 0:
-            item = QtWidgets.QListWidgetItem("Server: Введите ник")
-            item.setForeground(QtGui.QColor("purple"))
-            self.ui.listWidget.addItem(item)
-            self.server.close()
+            self.create_note("Введите ник!", "purple")
+        elif self.nickname.replace(" ", "") == 'Server':
+            self.create_note('"Server" - системное имя.', "purple")
+        elif self.nickname.find(':') != -1:
+            self.create_note('":" - запрещённый символ для ника.', "purple")
         else:
-            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            HOST, PORT = self.ui.lineEdit.text().split(":")
-            self.server.connect((HOST, int(PORT)))
+            try:
+                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                HOST, PORT = self.ui.lineEdit.text().split(":")
+                self.server.connect((HOST, int(PORT)))
 
-            self.receive_process = threading.Thread(target=self.receive).start()
+                self.connection = True
+
+                self.receive_process = threading.Thread(target=self.receive).start()
+            except:
+                self.create_note("Слишком большой ник!", "purple")
 
     def send_msg(self):
-        text = f"{self.nickname}: {self.ui.plainTextEdit.toPlainText()}"
-        item = QtWidgets.QListWidgetItem(text)
-        item.setForeground(QtGui.QColor("green"))
-        self.ui.listWidget.addItem(item)
-        try:
-            self.server.sendall(text.encode("utf-8"))
-        except:
-            item = QtWidgets.QListWidgetItem("Server: Вы не подключены к серверу")
-            item.setForeground(QtGui.QColor("purple"))
-            self.ui.listWidget.addItem(item)
+        raw_text = self.ui.plainTextEdit.toPlainText()
+        text = self.formate(raw_text)
+        if len(text) == 0:
+            self.create_note("Server: Пустое сообщение!", "purple")
+        else:
+            text = f"{self.nickname}: {text}"
+            try:
+                self.server.sendall(text.encode("utf-8"))
+                self.create_note(text, "green")
+            except:
+                self.create_note("Вы не подключены к серверу!", "purple")
+        self.ui.plainTextEdit.setPlainText('')
 
 
     def receive(self):
-        while True:
+        while self.connection:
             try:
                 message = self.server.recv(1024).decode("utf-8")
-                if message == 'NICK_REQUEST':
+                if message == 'Server: NICK_REQUEST':
                     self.server.sendall(self.nickname.encode('utf-8'))
+                elif message[:7] == 'Server:':
+                    self.create_note(message, "purple")
                 else:
-                    item = QtWidgets.QListWidgetItem(message)
-                    item.setForeground(QtGui.QColor("red"))
-                    self.ui.listWidget.addItem(item)
+                    self.create_note(message, "red")
 
             except:
-                print("TY LOH")
-                self.server.close()
                 break
 
 
