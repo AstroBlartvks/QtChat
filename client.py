@@ -42,6 +42,7 @@ class mywindow(QtWidgets.QMainWindow):
             self.server.close()
             self.create_note("Server: Вы отключились от сервера!", "purple")
             self.connection = False
+            self.ui.listWidget.scrollToBottom()
 
     def connect_to(self):
         self.disconnect()
@@ -65,6 +66,7 @@ class mywindow(QtWidgets.QMainWindow):
                 self.receive_process = threading.Thread(target=self.receive).start()
             except:
                 self.create_note("Слишком большой ник!", "purple")
+        self.ui.listWidget.scrollToBottom()
 
     def send_msg(self):
         raw_text = self.ui.plainTextEdit.toPlainText()
@@ -79,6 +81,7 @@ class mywindow(QtWidgets.QMainWindow):
             except:
                 self.create_note("Вы не подключены к серверу!", "purple")
         self.ui.plainTextEdit.setPlainText('')
+        self.ui.listWidget.scrollToBottom()
 
 
     def receive(self):
@@ -91,7 +94,7 @@ class mywindow(QtWidgets.QMainWindow):
                     self.create_note(message, "purple")
                 else:
                     self.create_note(message, "red")
-
+                self.ui.listWidget.scrollToBottom()
             except:
                 break
 
