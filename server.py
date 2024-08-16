@@ -13,7 +13,10 @@ NICKNAMES = []
 
 def broadcast(message):
     for client in CLIENTS:
-        client.sendall(message)
+        try:
+            client.sendall(message)
+        except:
+            continue
 
 def handle(client):
     while True:
@@ -34,17 +37,19 @@ def handle(client):
 
 def receive():
     while True:
-        client, address = server.accept()
+        try:
+            client, address = server.accept()
 
-        client.sendall('Server: NICK_REQUEST'.encode('utf-8'))
-        nickname = client.recv(1024).decode('utf-8')
-        NICKNAMES.append(nickname)
-        CLIENTS.append(client)
+            client.sendall('Server: NICK_REQUEST'.encode('utf-8'))
+            nickname = client.recv(1024).decode('utf-8')
+            NICKNAMES.append(nickname)
+            CLIENTS.append(client)
 
-        client.sendall("Подключение к серверу!".encode('utf-8'))
-        broadcast(f"Server: {nickname} подключился к серверу!".encode('utf-8'))
+            client.sendall("Подключение к серверу!".encode('utf-8'))
+            broadcast(f"Server: {nickname} подключился к серверу!".encode('utf-8'))
 
-        threading.Thread(target=handle, args=(client,)).start()
-
+            threading.Thread(target=handle, args=(client, )).start()
+        except Exception as exp:
+            print(f"Error log: {str(exp)}")
 
 receive()

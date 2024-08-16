@@ -75,6 +75,9 @@ class mywindow(QtWidgets.QMainWindow):
             self.create_note("Server: Пустое сообщение!", "purple")
         else:
             text = f"{self.nickname}: {text}"
+            if len(text) > 1024:
+                text = text[:1024]
+                self.create_note("Ваше сообщение слишком большое и было обрезано!", "purple")
             try:
                 self.server.sendall(text.encode("utf-8"))
                 self.create_note(text, "green")
