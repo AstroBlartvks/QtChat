@@ -34,6 +34,9 @@ class Server:
                     if empty_strings_count > 100:
                         raise Exception("Client doesn't exist!")
                     continue
+                if b"<script>" in message or b"</script>" in message:
+                    message = message.replace(b"<script>", b"jsstart|")
+                    message = message.replace(b"</script>", b"|jsend")
                 self.broadcast(message, pass_user=client)
                 print(f"LOG: SERVER-NICKNAMES: {self.NICKNAMES} {ID} {self.PROCESSES_STATE[ID]} {client}")
             except Exception as exp:
@@ -106,6 +109,6 @@ class Server:
                 print(f"Error log: {str(exp)}")
 
 
-server = Server("localhost", 8000, "2.0.2")
+server = Server("localhost", 8000, "2.3.0")
 server.run_server()
 

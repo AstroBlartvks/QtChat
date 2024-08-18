@@ -186,35 +186,9 @@ background-color: rgb(0, 102, 0);
      </widget>
     </item>
     <item>
-     <widget class="QListWidget" name="listWidget">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
+     <widget class="QWebEngineView" name="WebInterface" native="true">
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(255, 255, 255);
-font-size: 14pt;
-padding: 10px;</string>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAsNeeded</enum>
-      </property>
-      <property name="horizontalScrollBarPolicy">
-       <enum>Qt::ScrollBarAsNeeded</enum>
-      </property>
-      <property name="sizeAdjustPolicy">
-       <enum>QAbstractScrollArea::AdjustIgnored</enum>
-      </property>
-      <property name="isWrapping" stdset="0">
-       <bool>false</bool>
-      </property>
-      <property name="spacing">
-       <number>5</number>
-      </property>
-      <property name="wordWrap">
-       <bool>false</bool>
+       <string notr="true"/>
       </property>
      </widget>
     </item>
@@ -302,6 +276,14 @@ font-size: 14pt;</string>
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QWebEngineView</class>
+   <extends>QWidget</extends>
+   <header location="global">qwebengineview.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
