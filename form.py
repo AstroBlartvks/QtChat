@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(800, 600)
+        MainWindow.resize(816, 600)
         MainWindow.setStyleSheet("background-color: rgb(38, 38, 38);")
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setStyleSheet("font: 16pt \"Segoe UI\";")
@@ -59,6 +59,38 @@ class Ui_MainWindow(object):
         self.pushButton = QtWidgets.QPushButton(self.frame)
         self.pushButton.setObjectName("pushButton")
         self.horizontalLayout.addWidget(self.pushButton)
+        self.pushButton_3 = QtWidgets.QPushButton(self.frame)
+        self.pushButton_3.setObjectName("pushButton_3")
+        self.horizontalLayout.addWidget(self.pushButton_3)
+        self.frame_3 = QtWidgets.QFrame(self.frame)
+        self.frame_3.setMinimumSize(QtCore.QSize(30, 30))
+        self.frame_3.setMaximumSize(QtCore.QSize(30, 30))
+        self.frame_3.setStyleSheet("QPushButton{\n"
+"background-color: rgb(0, 255, 0);\n"
+"\n"
+"}\n"
+"\n"
+"QPushButton:hover{\n"
+"background-color: rgb(0, 204, 0);\n"
+"}\n"
+"\n"
+"QPushButton:pressed{\n"
+"background-color: rgb(0, 102, 0);\n"
+"\n"
+"}")
+        self.frame_3.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame_3.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame_3.setObjectName("frame_3")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.frame_3)
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.pushButton_4 = QtWidgets.QPushButton(self.frame_3)
+        self.pushButton_4.setStyleSheet("")
+        self.pushButton_4.setText("")
+        self.pushButton_4.setObjectName("pushButton_4")
+        self.verticalLayout_2.addWidget(self.pushButton_4)
+        self.horizontalLayout.addWidget(self.frame_3)
         self.verticalLayout.addWidget(self.frame)
         self.listWidget = QtWidgets.QListWidget(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -123,5 +155,6 @@ class Ui_MainWindow(object):
         self.lineEdit.setPlaceholderText(_translate("MainWindow", "IP:PORT"))
         self.lineEdit_2.setPlaceholderText(_translate("MainWindow", "НИК"))
         self.pushButton.setText(_translate("MainWindow", "Подключиться"))
+        self.pushButton_3.setText(_translate("MainWindow", "Отключиться"))
         self.plainTextEdit.setPlaceholderText(_translate("MainWindow", "Введите текст"))
         self.pushButton_2.setText(_translate("MainWindow", "Отправить"))
