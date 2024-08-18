@@ -7,7 +7,7 @@ import sys, socket
 class mywindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(mywindow, self).__init__()
-        self.version = b"2.0.1"
+        self.version = b"2.0.2"
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.server = None
@@ -69,16 +69,19 @@ class mywindow(QtWidgets.QMainWindow):
             self.ui.listWidget.scrollToBottom()
 
     def connect_to(self):
-        self.disconnect()
+        if self.connection:
+            self.create_note("Server: Вы уже на сервере!", "white", bgcolor=(255, 0, 0, 255))
+            return
+        
         self.nickname = self.ui.lineEdit_2.text().rstrip()
         if len(self.nickname) > 16:
-            self.create_note("Слишком большой ник!", "white", bgcolor=(255, 0, 0, 255))
+            self.create_note("client: Слишком большой ник!", "white", bgcolor=(255, 0, 0, 255))
         elif len(self.nickname) == 0:
-            self.create_note("Введите ник!", "white", bgcolor=(255, 0, 0, 255))
+            self.create_note("client: Введите ник!", "white", bgcolor=(255, 0, 0, 255))
         elif "server" in self.nickname.lower():
-            self.create_note('"Server" - системное имя.', "white", bgcolor=(255, 0, 0, 255))
+            self.create_note('Client: "Server" - системное имя.', "white", bgcolor=(255, 0, 0, 255))
         elif sum(list([1 if x in self.nickname else 0 for x in ":\'\"/;"])) > 0:
-            self.create_note('Использованы запрещенные символы для ника: :\'\"/;', "white", bgcolor=(255, 0, 0, 255))
+            self.create_note('Client: Использованы запрещенные символы для ника: :\'\"/;', "white", bgcolor=(255, 0, 0, 255))
         else:
             try:
                 self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -88,37 +91,52 @@ class mywindow(QtWidgets.QMainWindow):
                 self.receive_process = threading.Thread(target=self.receive)
                 self.receive_process.start()
             except:
-                self.create_note("Не удалось установить соединение, проверьте IP или сервер", "white", bgcolor=(255, 0, 0, 255))
+                self.create_note("Server: Не удалось установить соединение, проверьте IP или сервер", "white", bgcolor=(255, 0, 0, 255))
         self.ui.listWidget.scrollToBottom()
 
     def send_msg(self):
         raw_text = self.ui.plainTextEdit.toPlainText()
         text = self.formate(raw_text)
         if len(text) == 0:
-            self.create_note("Server: Пустое сообщение!", "white", bgcolor=(255, 0, 0, 255))
+            self.create_note("Cliet: Пустое сообщение!", "white", bgcolor=(255, 0, 0, 255))
         else:
             text = f"{self.nickname}: {text}"
             if len(text) > 1024:
                 text = text[:1024]
-                self.create_note("Ваше сообщение слишком большое и было обрезано!", "white", bgcolor=(255, 0, 0, 255))
+                self.create_note("Client: Ваше сообщение слишком большое и было обрезано!", "white", bgcolor=(255, 0, 0, 255))
             try:
                 self.server.sendall(text.encode("utf-8"))
                 self.create_note(text, self.get_RGBA64(self.my_color))
             except:
-                self.create_note("Вы не подключены к серверу!", "white", bgcolor=(255, 0, 0, 255))
+                self.create_note("Client: Вы не подключены к серверу!", "white", bgcolor=(255, 0, 0, 255))
         self.ui.plainTextEdit.setPlainText('')
         self.ui.listWidget.scrollToBottom()
 
     def receive(self):
+        empty_strings_count = 0
         while self.connection:
             try:
-                message = self.server.recv(1024).decode("utf-8")
+                message = self.server.recv(1024)
+                message = message.decode("utf-8")
+                if message == "":
+                    empty_strings_count += 1
+                    if empty_strings_count > 100:
+                        self.disconnect()
+                        self.create_note("Client: произошла ошибка на сервере! Скорее всего он выключился", "white", bgcolor=(255, 0, 0, 255))
+                        return 
+                    continue
+
                 if message == 'Server: NICK_REQUEST':
                     self.server.sendall(self.version+self.nickname.encode('utf-8'))
                     response = self.server.recv(1024).decode("utf-8")
-                    if response != "Подключение к серверу!":
+                    if not("Подключение к серверу!" in response):
                         self.create_note(response, "white", bgcolor=(255, 0, 0, 255))
                         self.disconnect()
+                    if "Подключение к серверу!" in response and "Server:" in response:
+                        #Фикс бага с склейкой "Подключение к серверу!" и "Server" {user_name} подключился к серверу!"
+                        response = response.split("!")[0] + "!\n" + response.split("!")[1] + "!"
+                        self.create_note(response, "white", bgcolor=(255, 0, 0, 255))
+
                 elif message[:7] == 'Server:':
                     self.create_note(message, "white", bgcolor=(255, 0, 0, 255))
                 else:

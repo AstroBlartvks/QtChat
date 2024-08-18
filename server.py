@@ -8,10 +8,6 @@ class Server:
         self.PORT = port
         self.version = version
 
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((self.HOST, self.PORT))
-        self.server.listen()
-
         self.CLIENTS = []
         self.NICKNAMES = []
         self.PROCESSES_STATE = []
@@ -28,12 +24,18 @@ class Server:
 
     def handle(self, client, ID):
         """обработчик клиента на сервере"""
+        empty_strings_count = 0
         while self.PROCESSES_STATE[ID]:
             try:
                 #Пересылаем сообщения клиента всем, кроме его самого
                 message = client.recv(1024)
+                if message == b"":
+                    empty_strings_count += 1
+                    if empty_strings_count > 100:
+                        raise Exception("Client doesn't exist!")
+                    continue
                 self.broadcast(message, pass_user=client)
-                print(f"LOG: SERVER-NICKNAMES: {self.NICKNAMES}")
+                print(f"LOG: SERVER-NICKNAMES: {self.NICKNAMES} {ID} {self.PROCESSES_STATE[ID]} {client}")
             except Exception as exp:
                 #Закрытие клиента
                 index = self.CLIENTS.index(client)
@@ -62,6 +64,11 @@ class Server:
 
     def run_server(self):
         """Принятие новых клиентов на сервер"""
+
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.bind((self.HOST, self.PORT))
+        self.server.listen()
+
         index = 0
         while True:
             try:
@@ -99,6 +106,6 @@ class Server:
                 print(f"Error log: {str(exp)}")
 
 
-server = Server("localhost", 8000, "2.0.0")
+server = Server("localhost", 8000, "2.0.2")
 server.run_server()
 
