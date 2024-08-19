@@ -109,6 +109,6 @@ class Server:
                 print(f"Error log: {str(exp)}")
 
 
-server = Server("localhost", 8000, "2.3.0")
+server = Server("localhost", 8000, "2.3.1")
 server.run_server()
 

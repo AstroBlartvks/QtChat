@@ -1,12 +1,15 @@
 #pip install PyQt5              
 #pip install PyQtWebEngine      для QWebEngineView 
 
-from PyQt5 import QtWidgets, QtCore
-from form import Ui_MainWindow
+import sys
+import socket
 import threading
-from message_plugin import Messanger
-import sys, socket
 
+from form import Ui_MainWindow
+from PyQt5 import QtWidgets, QtCore
+
+from add.new_socket import New_socket
+from message_plugin import Messanger
 
 
 class MessageWorker(QtCore.QObject):
@@ -27,7 +30,7 @@ class MessageWorker(QtCore.QObject):
 class mywindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(mywindow, self).__init__()
-        self.version = b"2.3.0"
+        self.version = b"2.3.1"
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.server = None
@@ -37,6 +40,8 @@ class mywindow(QtWidgets.QMainWindow):
         self.connection = False
         self.msgWorker = MessageWorker(self)
         self.msgWorker.htmlChanged.connect(self.ui.WebInterface.setHtml)
+
+        self.new_socket = New_socket(path_dll="./add/new_socket.dll")
         
         self.messanger = Messanger()
         self.messanger.load_html()
@@ -62,12 +67,9 @@ class mywindow(QtWidgets.QMainWindow):
             """)
             
     def closeEvent(self, event):
-        reply = QtWidgets.QMessageBox.question\
-        (self, 'Вы нажали на крестик',
-            "Вы уверены, что хотите уйти?",
-            QtWidgets.QMessageBox.Yes,
-            QtWidgets.QMessageBox.No)
-        if reply == QtWidgets.QMessageBox.Yes:
+        result = self.new_socket.msg_value("Вы нажали на крестик", "Вы уверены, что хотите уйти?")
+        print(result)
+        if result == 6:
             self.disconnect()
             event.accept()
         else:
@@ -94,30 +96,29 @@ class mywindow(QtWidgets.QMainWindow):
     def connect_to(self):
         try:
             if self.connection:
-                self.add_message("server", "Вы уже на сервере!")
-                return
+                return self.add_message("server", "Вы уже на сервере!")
             self.add_message("clear", None)
             
             self.nickname = self.ui.lineEdit_2.text().rstrip()
             if len(self.nickname) > 16:
-                self.add_message("client", "Слишком большой ник!")
+                return self.add_message("client", "Слишком большой ник!")
             elif len(self.nickname) == 0:
-                self.add_message("client", "Введите ник!")
+                return self.add_message("client", "Введите ник!")
             elif "server" in self.nickname.lower():
-                self.add_message("client", "\"Server\" - системное имя.")
+                return self.add_message("client", "\"Server\" - системное имя.")
             elif sum(list([1 if x in self.nickname else 0 for x in ":\'\"/;"])) > 0:
-                self.add_message("client", "Использованы запрещенные символы для ника: :\'\"/;")
-            else:
-                try:
-                    self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    HOST, PORT = self.ui.lineEdit.text().split(":")
-                    self.server.connect((HOST, int(PORT)))
-                    self.connection = True
-                    self.receive_process = threading.Thread(target=self.receive)
-                    self.receive_process.start()
-                except Exception as exp:
-                    print("CLIENT ERROR (f.connect_to.2):", str(exp))
-                    self.add_message("server", "Не удалось установить соединение, проверьте IP или сервер")
+                return self.add_message("client", "Использованы запрещенные символы для ника: :\'\"/;")
+
+            try:
+                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                HOST, PORT = self.ui.lineEdit.text().split(":")
+                self.server.connect((HOST, int(PORT)))
+                self.connection = True
+                self.receive_process = threading.Thread(target=self.receive)
+                self.receive_process.start()
+            except Exception as exp:
+                print("CLIENT ERROR (f.connect_to.2):", str(exp))
+                self.add_message("server", "Не удалось установить соединение, проверьте IP или сервер")
         except Exception as exp:
             print("CLIENT ERROR (f.connect_to.1):", str(exp))
 
@@ -180,7 +181,7 @@ class mywindow(QtWidgets.QMainWindow):
                         self.add_message("server", message)
                     else:
                         nick = message.split(":")[0]
-                        msg = message.split(":")[1]
+                        msg = ":".join(message.split(":")[1:])
                         self.add_message("friend", msg, nick)
                     #self.ui.listWidget.scrollToBottom()
                 except Exception as exp:
