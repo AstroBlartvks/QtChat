@@ -1,6 +1,6 @@
 import socket
 import threading
-
+import add.ip_packets as ipp
 
 class Server:
     def __init__(self, host, port, version):
@@ -67,10 +67,11 @@ class Server:
 
     def run_server(self):
         """Принятие новых клиентов на сервер"""
-
+        print("LOG: SERVER: Сервер запускается")
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server.bind((self.HOST, self.PORT))
         self.server.listen()
+        print("LOG: SERVER: Сервер запустился и прослушивается")
 
         index = 0
         while True:
@@ -106,9 +107,9 @@ class Server:
                     process.start()
                     index += 1
             except Exception as exp:
-                print(f"Error log: {str(exp)}")
+                print(f"LOG: SERVER-ERROR: {str(exp)}")
 
 
-server = Server("localhost", 8000, "2.3.1")
+server = Server("localhost", 8000, "2.3.2")
 server.run_server()
 

@@ -11,26 +11,10 @@ from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
 import add.add_utils as utils
+import add.ip_packets as ipp
 
 from add.new_socket import New_socket
 from message_plugin import Messanger
-
-
-class MessageWorker(QtCore.QObject):
-    """ОТОБРАЖЕНИЕ HTML СТРАНИЧКИ ДЛЯ СООБЩЕНИЙ"""
-    htmlChanged = QtCore.pyqtSignal(str)
-
-    def add_message(self, messanger, type_, text, nickname, style):
-        """Типо создать процесс, который поменяет html, хз как оно работает, по другому никак"""
-        threading.Thread(target=self.task, daemon=True, args=(messanger, type_, text, nickname, style,)).start()
-
-    def task(self, messanger, type_, text, nickname, style):
-        """Добавляет сообщения в html (подробно об аргументах смотреть в message_pluhin.py)"""
-        try:
-            res = messanger.change_html(type_, text, nickname, style)
-            self.htmlChanged.emit(res)
-        except Exception as exp:
-            print("CLIENT ERROR (f.add_messgae):", str(exp))
 
 
 class mywindow(QtWidgets.QMainWindow):
@@ -45,30 +29,27 @@ class mywindow(QtWidgets.QMainWindow):
         self.create_additions()
         self.connect_buttons()
 
-    def creeate_class_variable(self):
-        """СОЗДАВАТЬ ПЕРЕМЕННЫЕ КЛАССА"""
-        #bool
-        self.connection = False
 
-        #strings
-        self.version  = b"2.3.1"
+    def creeate_class_variable(self):
+        """СОЗДАВАТЬ ПЕРЕМЕННЫЕ КЛАССА bool, string, int, other"""
+        self.connection = False
+        self.version  = b"2.3.2"
         self.my_color = "#00ff00"
         self.nickname = ''
-
-        #other
         self.server = None
         self.receive_process = None
 
 
     def create_additions(self):
         """СОЗДАВАТЬ ДОПОЛНИТЕЛЬНЫЕ КЛАССЫ"""
-        self.msgWorker = MessageWorker(self)
+        self.msgWorker = utils.MessageWorker(self)
         self.msgWorker.htmlChanged.connect(self.ui.WebInterface.setHtml)
 
         self.new_socket = New_socket(path_dll="./add/new_socket.dll")
 
         self.messanger = Messanger()
         self.messanger.load_html()
+
 
     def connect_buttons(self):
         """ПРИКРЕПИТЬ КНОПКИ"""
@@ -80,12 +61,14 @@ class mywindow(QtWidgets.QMainWindow):
         self.ui.pushButton_4.clicked.connect(self.change_color)
         self.ui.pushButton_5.clicked.connect(self.add_file)
     
+
     def add_file(self):
         """Добавление файлов"""
         try:
             print("No")
         except Exception as exp:
             print(exp)
+
 
     def change_color(self):
         """СМЕНА ЦВЕТА ТЕКСТУ"""
@@ -103,6 +86,7 @@ class mywindow(QtWidgets.QMainWindow):
             background-color: rgb("""+ str(int(rgba[0]*0.4)) +"," + str(int(rgba[1]*0.4)) + "," + str(int(rgba[2]*0.4)) + """);}
             """)
             
+
     def closeEvent(self, event):
         """ЗАКРЫТИЕ ОКНА"""
         result = self.new_socket.msg_value("Вы нажали на крестик", "Вы уверены, что хотите уйти?")
@@ -112,9 +96,11 @@ class mywindow(QtWidgets.QMainWindow):
         else:
             event.ignore()
 
+
     def add_message(self, type_, text, nickname=None, style=None):
         """Добавляет сообщения в html (подробно об аргументах смотреть в message_plugin.py)"""
         self.msgWorker.add_message(self.messanger, type_, text, nickname, style)
+
 
     def disconnect(self):
         """Попытка выхода"""
@@ -128,27 +114,23 @@ class mywindow(QtWidgets.QMainWindow):
         except Exception as exp:
             print("CLIENT ERROR (f.disconnect):", str(exp))
 
+
     def connect_to(self):
         """Попытка присоединиться"""
         try:
             if self.connection:
-                return self.add_message("server", "Вы уже на сервере!")
+                self.add_message("server", "Вы уже на сервере!")
+                return
+
             self.add_message("clear", None)
-            
             self.nickname = self.ui.lineEdit_2.text().rstrip()
-            if len(self.nickname) > 16:
-                return self.add_message("client", "Слишком большой ник!")
-            elif len(self.nickname) == 0:
-                return self.add_message("client", "Введите ник!")
-            elif "server" in self.nickname.lower():
-                return self.add_message("client", "\"Server\" - системное имя.")
-            elif sum(list([1 if x in self.nickname else 0 for x in ":\'\"/;"])) > 0:
-                return self.add_message("client", "Использованы запрещенные символы для ника: :\'\"/;")
+            if utils.check_nicknames(self.nickname, self.add_message) == "BAD_NICKNAME":
+                return 
 
             try:
                 self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                HOST, PORT = self.ui.lineEdit.text().split(":")
-                self.server.connect((HOST, int(PORT)))
+                host, port = self.ui.lineEdit.text().split(":")
+                self.server.connect((host, int(port)))
                 self.connection = True
                 self.receive_process = threading.Thread(target=self.receive)
                 self.receive_process.start()
@@ -157,6 +139,39 @@ class mywindow(QtWidgets.QMainWindow):
                 self.add_message("server", "Не удалось установить соединение, проверьте IP или сервер")
         except Exception as exp:
             print("CLIENT ERROR (f.connect_to.1):", str(exp))
+
+
+    def handle_message(self, message):
+        if message == 'Server: NICK_REQUEST':
+            self.server.sendall(self.version + self.nickname.encode('utf-8'))
+            response = self.server.recv(1024).decode("utf-8")
+
+            if not("Подключение к серверу!" in response):
+                self.disconnect()
+                self.add_message("server", response)
+            elif "Подключение к серверу!" in response and "Server:" in response:
+                #Фикс бага с склейкой "Подключение к серверу!" и "Server" {user_name} подключился к серверу!"
+                self.add_message("server", response.split("!")[0] + "!\n" + response.split("!")[1] + "!")
+        elif message[:7] == 'Server:':
+            self.add_message("server", message)
+        else:
+            nick = message.split(":")[0]
+            msg = ":".join(message.split(":")[1:])
+            self.add_message("friend", msg, nick)
+
+
+    def accept_server_error(self, empty_count=0, exception=""):
+        if empty_count > 100:
+            self.disconnect()
+            self.add_message("client", "Произошла ошибка на сервере! Скорее всего он выключился!")
+            return True
+        if "[WinError 10054]" in exception:
+            print("CLIENT ERROR (f.recieve.2): Сервер разорвал соединение")
+            self.disconnect()
+            self.add_message("client", "Произошла ошибка на сервере! Скорее всего он выключился!")
+            return True
+        return False
+
 
     def send_msg(self):
         """Отпрвка сообщений"""
@@ -185,6 +200,7 @@ class mywindow(QtWidgets.QMainWindow):
         except Exception as exp:
                 print("CLIENT ERROR (f.send_msg):", str(exp))
 
+
     def receive(self):
         """Попытка получения сообщений"""
         try:
@@ -193,36 +209,20 @@ class mywindow(QtWidgets.QMainWindow):
             while self.connection:
                 try:
                     message = self.server.recv(1024)
-                    message = message.decode("utf-8")
 
-                    if message == "":
+                    if message == b"":
                         empty_strings_count += 1
-                        if empty_strings_count > 100:
-                            self.disconnect()
-                            self.add_message("client", "Произошла ошибка на сервере! Скорее всего он выключился!")
-                            return 
+                        if self.accept_server_error(empty_count=empty_strings_count):
+                            return
                         continue
 
-                    if message == 'Server: NICK_REQUEST':
-                        self.server.sendall(self.version+self.nickname.encode('utf-8'))
-                        response = self.server.recv(1024).decode("utf-8")
-                        
-                        if not("Подключение к серверу!" in response):
-                            self.add_message("server", response)
-                            self.disconnect()
-                        if "Подключение к серверу!" in response and "Server:" in response:
-                            #Фикс бага с склейкой "Подключение к серверу!" и "Server" {user_name} подключился к серверу!"
-                            response = response.split("!")[0] + "!\n" + response.split("!")[1] + "!"
-                            self.add_message("server", response)
+                    message = message.decode("utf-8")
 
-                    elif message[:7] == 'Server:':
-                        self.add_message("server", message)
-                    else:
-                        nick = message.split(":")[0]
-                        msg = ":".join(message.split(":")[1:])
-                        self.add_message("friend", msg, nick)
-                    #self.ui.listWidget.scrollToBottom()
+                    self.handle_message(message)
+
                 except Exception as exp:
+                    if self.accept_server_error(exception=str(exp)):
+                        return
                     print("CLIENT ERROR (f.recieve.2):", str(exp))
         except Exception as exp:
             print("CLIENT ERROR (f.recieve.1):", str(exp))
