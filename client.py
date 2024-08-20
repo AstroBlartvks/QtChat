@@ -6,16 +6,22 @@ import socket
 import threading
 
 from form import Ui_MainWindow
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtCore
+from PyQt5 import QtWidgets
+
+import add.add_utils as utils
 
 from add.new_socket import New_socket
 from message_plugin import Messanger
 
 
 class MessageWorker(QtCore.QObject):
+    """ОТОБРАЖЕНИЕ HTML СТРАНИЧКИ ДЛЯ СООБЩЕНИЙ"""
     htmlChanged = QtCore.pyqtSignal(str)
 
     def add_message(self, messanger, type_, text, nickname, style):
+        """Типо создать процесс, который поменяет html, хз как оно работает, по другому никак"""
         threading.Thread(target=self.task, daemon=True, args=(messanger, type_, text, nickname, style,)).start()
 
     def task(self, messanger, type_, text, nickname, style):
@@ -29,29 +35,60 @@ class MessageWorker(QtCore.QObject):
 
 class mywindow(QtWidgets.QMainWindow):
     def __init__(self):
+        """КЛАСС ОКНА"""
         super(mywindow, self).__init__()
-        self.version = b"2.3.1"
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(QtGui.QIcon("./icons/icon.png"))
+
+        self.creeate_class_variable()
+        self.create_additions()
+        self.connect_buttons()
+
+    def creeate_class_variable(self):
+        """СОЗДАВАТЬ ПЕРЕМЕННЫЕ КЛАССА"""
+        #bool
+        self.connection = False
+
+        #strings
+        self.version  = b"2.3.1"
+        self.my_color = "#00ff00"
+        self.nickname = ''
+
+        #other
         self.server = None
         self.receive_process = None
-        self.nickname = ''
-        self.my_color = "#00ff00"
-        self.connection = False
+
+
+    def create_additions(self):
+        """СОЗДАВАТЬ ДОПОЛНИТЕЛЬНЫЕ КЛАССЫ"""
         self.msgWorker = MessageWorker(self)
         self.msgWorker.htmlChanged.connect(self.ui.WebInterface.setHtml)
 
         self.new_socket = New_socket(path_dll="./add/new_socket.dll")
-        
+
         self.messanger = Messanger()
         self.messanger.load_html()
 
+    def connect_buttons(self):
+        """ПРИКРЕПИТЬ КНОПКИ"""
+        self.ui.pushButton_5.setIcon(QtGui.QIcon("icons/attach.png"))
+        self.ui.pushButton_5.setIconSize(QtCore.QSize(32, 32))
         self.ui.pushButton.clicked.connect(self.connect_to)   
         self.ui.pushButton_2.clicked.connect(self.send_msg) 
         self.ui.pushButton_3.clicked.connect(self.disconnect)
         self.ui.pushButton_4.clicked.connect(self.change_color)
+        self.ui.pushButton_5.clicked.connect(self.add_file)
     
+    def add_file(self):
+        """Добавление файлов"""
+        try:
+            print("No")
+        except Exception as exp:
+            print(exp)
+
     def change_color(self):
+        """СМЕНА ЦВЕТА ТЕКСТУ"""
         color = QtWidgets.QColorDialog.getColor()
 
         if color.isValid():
@@ -67,8 +104,8 @@ class mywindow(QtWidgets.QMainWindow):
             """)
             
     def closeEvent(self, event):
+        """ЗАКРЫТИЕ ОКНА"""
         result = self.new_socket.msg_value("Вы нажали на крестик", "Вы уверены, что хотите уйти?")
-        print(result)
         if result == 6:
             self.disconnect()
             event.accept()
@@ -76,13 +113,11 @@ class mywindow(QtWidgets.QMainWindow):
             event.ignore()
 
     def add_message(self, type_, text, nickname=None, style=None):
-        """Добавляет сррьщение в html (подробно об аргументах смотреть в message_pluhin.py)"""
+        """Добавляет сообщения в html (подробно об аргументах смотреть в message_plugin.py)"""
         self.msgWorker.add_message(self.messanger, type_, text, nickname, style)
 
-    def formate(self, text):
-        return "\n".join(list([x.rstrip() for x in text.split("\n") if x != "" and x != " " and not(x.count(" ") == len(x))]))
-
     def disconnect(self):
+        """Попытка выхода"""
         try:
             if self.connection:
                 self.server.close()
@@ -94,6 +129,7 @@ class mywindow(QtWidgets.QMainWindow):
             print("CLIENT ERROR (f.disconnect):", str(exp))
 
     def connect_to(self):
+        """Попытка присоединиться"""
         try:
             if self.connection:
                 return self.add_message("server", "Вы уже на сервере!")
@@ -123,13 +159,14 @@ class mywindow(QtWidgets.QMainWindow):
             print("CLIENT ERROR (f.connect_to.1):", str(exp))
 
     def send_msg(self):
+        """Отпрвка сообщений"""
         try:
             raw_text = self.ui.plainTextEdit.toPlainText()
             if "<!-- START BODY -->" in raw_text or "<!-- END BODY -->" in raw_text:
                 self.add_message("client", "Запрещено использовать такие сообщения!")
                 return
             
-            text = self.formate(raw_text)
+            text = utils.formate_text(raw_text)
             if len(text) == 0:
                 self.add_message("client", "Пустое сообщение!")
                 return
@@ -149,6 +186,7 @@ class mywindow(QtWidgets.QMainWindow):
                 print("CLIENT ERROR (f.send_msg):", str(exp))
 
     def receive(self):
+        """Попытка получения сообщений"""
         try:
             empty_strings_count = 0
 
